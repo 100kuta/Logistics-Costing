@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Leaflet Web Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+    <script src="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-control-geocoder/dist/Control.Geocoder.css" />
+    <style>
+        #map { height: 600px; }
+        #price-display { margin-top: 10px; }
+        #reset-btn { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <div id="map"></div>
+    <div id="price-display">Price: ₦0</div>
+    <button id="reset-btn">Reset</button>
+
+    <script>
+        // Initialize the map
+        var map = L.map('map', {
+            center: [39.73, -104.99],
+            zoom: 10,
+            layers: [osm]
+        });
+
+        // Base layers
+        var gmap = L.tileLayer('http://mt0.google.com/vt/lyrs=y&hl=en&x={x}&y={y}&z={z}', {
+            maxZoom: 25,
+            attribution: 'Google Map'
+        });
+
+        var osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap'
+        });
+
+        var osmHOT = L.tileLayer('https://{s}.tile.openstreetmap.fr/hot/{z}/{x}/{y}.png', {
+            maxZoom: 19,
+            attribution: '© OpenStreetMap contributors, Tiles style by Humanitarian OpenStreetMap Team hosted by OpenStreetMap France'
+        });
+
+        // Add base layers to the map
+        var baseMaps = {
+            "Google Hybrid": gmap,
+            "OpenStreetMap": osm,
+            "OpenStreetMap.HOT": osmHOT
+        };
+
+        var overlayMaps = {
+            // Add overlay layers here if needed
+        };
+
+        var layerControl = L.control.layers(baseMaps, overlayMaps).addTo(map);
+
+        // Load and add GeoJSON data
+        fetch('path/to/your/price_points.geojson')
+            .then(response => response.json())
+            .then(data => {
+                var myLayer = L.geoJSON(data).addTo(map);
+            });
+
+        // Function to handle routing
+        var routingControl = null;
+        var markers = [];
+
+        function addRoutingControl(start, end) {
+            if (routingControl) {
+                map.removeControl(routingControl);
+            }
+            routingControl = L.Routing.control({
+                waypoints: [
+                    L.latLng(start.lat, start.lng),
+                    L.latLng(end.lat, end.lng)
+                ],
+                routeWhileDragging: true
+            }).on('routesfound', function (e) {
+                var routes = e.routes;
+                var summary = routes[0].summary;
+                var distance = summary.totalDistance / 1000; // distance in km
+                var price = (distance * 100) + 500;
+                var roundedPrice = Math.ceil(price / 100) * 100; // round up to nearest hundred
+                document.getElementById('price-display').innerText = 'Price: ₦' + roundedPrice;
+            }).addTo(map);
+        }
+
+        var waypoints = [];
+
+        // Function to handle map clicks
+        function onMapClick(e) {
+            if (waypoints.length < 2) {
+                var marker = L.marker(e.latlng).addTo(map);
+                markers.push(marker);
+                waypoints.push(e.latlng);
+
+                if (waypoints.length === 2) {
+                    addRoutingControl(waypoints[0], waypoints[1]);
+                }
+            }
+        }
+
+        // Function to reset waypoints
+        function resetWaypoints() {
+            if (routingControl) {
+                map.removeControl(routingControl);
+            }
+            waypoints = [];
+            markers.forEach(function(marker) {
+                map.removeLayer(marker);
+            });
+            markers = [];
+            document.getElementById('price-display').innerText = 'Price: ₦0';
+        }
+
+        // Add click event listener to the map
+        map.on('click', onMapClick);
+
+        // Add click event listener to the reset button
+        document.getElementById('reset-btn').addEventListener('click', resetWaypoints);
+
+        // Add geocoder control
+        L.Control.geocoder().addTo(map).on('markgeocode', function(e) {
+            var latlng = e.geocode.center;
+            if (waypoints.length < 2) {
+                var marker = L.marker(latlng).addTo(map);
+                markers.push(marker);
+                waypoints.push(latlng);
+
+                if (waypoints.length === 2) {
+                    addRoutingControl(waypoints[0], waypoints[1]);
+                }
+            }
+            map.setView(latlng, 13);
+        });
+    </script>
+</body>
+</html>

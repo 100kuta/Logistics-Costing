@@ -1,0 +1,30 @@
+body {
+    margin: 0;
+    padding: 0;
+}
+
+#map {
+    height: 100vh;
+}
+
+#reset-btn {
+    position: absolute;
+    top: 150px;
+    left: 10px;
+    z-index: 1000;
+    padding: 10px 10px;
+    background-color: rgb(239, 31, 128);
+    border: 1px solid #ccc;
+    cursor: pointer;
+}
+#price-display{
+    position: absolute;
+    top: 90px;
+    left: 10px;
+    z-index: 1000;
+    padding: 10px 10px;
+    background-color: #fdfdfb;
+    border: 1px solid #ccc;
+    cursor: pointer;
+}
+
